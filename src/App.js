@@ -519,7 +519,6 @@ export default function Portfolio() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center text-gray-400">
             <p className="mb-2">© 2025 Bilal KHALAK - Tous droits réservés</p>
-            <p className="text-sm">Développé avec React & Tailwind CSS</p>
           </div>
         </div>
       </footer>
