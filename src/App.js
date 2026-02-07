@@ -272,7 +272,7 @@ export default function Portfolio() {
               </span>
             </h1>
             <h2 className="text-2xl md:text-4xl text-gray-300 mb-4">
-              Ingénieur Full-Stack Software Engineer
+              Freelance Software Engineer
             </h2>
             <p className="text-xl md:text-2xl text-blue-400 mb-8">
               C# .NET 10 / Azure / Angular - Intelligence Artificielle
