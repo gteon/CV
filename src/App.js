@@ -493,7 +493,7 @@ export default function Portfolio() {
               </div>
               <div className="mt-8 flex justify-center space-x-6">
                 <a
-                  href="https://github.com"
+                  href="https://github.com/gteon/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-400 hover:text-white transition-colors"
@@ -501,7 +501,7 @@ export default function Portfolio() {
                   <Github size={32} />
                 </a>
                 <a
-                  href="https://linkedin.com"
+                  href="https://www.linkedin.com/in/bilal-khalak-267318ba/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-gray-400 hover:text-white transition-colors"
