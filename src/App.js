@@ -1,561 +1,714 @@
-import React, { useState, useEffect } from 'react';
-import { Menu, X, Mail, Phone, Github, Linkedin, ChevronDown, Code, Briefcase, Award, GraduationCap } from 'lucide-react';
+import { useState, useEffect, useRef } from "react";
+
+const FONTS = `
+@import url('https://fonts.googleapis.com/css2?family=Unbounded:wght@400;700;900&family=Fira+Code:wght@300;400;500&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&display=swap');
+`;
+
+const CSS = `
+  :root {
+    --bg: #04060d;
+    --bg2: #080c18;
+    --surface: rgba(255,255,255,0.03);
+    --surface2: rgba(255,255,255,0.06);
+    --border: rgba(255,255,255,0.07);
+    --border-accent: rgba(224, 184, 80, 0.3);
+    --gold: #e0b850;
+    --gold-dim: rgba(224, 184, 80, 0.15);
+    --text: #e8eaf0;
+    --text-dim: #6b7280;
+    --text-mid: #9ca3af;
+    --cyan: #38bdf8;
+    --font-display: 'Unbounded', sans-serif;
+    --font-mono: 'Fira Code', monospace;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body, #root {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    overflow-x: hidden;
+  }
+
+  .grain {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+    opacity: 0.4;
+  }
+
+  .grid-bg {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background-image:
+      linear-gradient(rgba(224,184,80,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(224,184,80,0.03) 1px, transparent 1px);
+    background-size: 60px 60px;
+  }
+
+  /* NAV */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    transition: all 0.4s;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+  .nav.scrolled {
+    background: rgba(4,6,13,0.92);
+    backdrop-filter: blur(16px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-inner {
+    max-width: 1280px; margin: 0 auto;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2rem; height: 60px;
+  }
+  .nav-logo {
+    font-family: var(--font-display);
+    font-size: 18px; font-weight: 900;
+    color: var(--gold);
+    letter-spacing: -0.02em;
+  }
+  .nav-links { display: flex; gap: 2.5rem; }
+  .nav-link {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-dim); text-transform: uppercase;
+    transition: color 0.2s; font-family: var(--font-mono);
+    font-size: 11px; letter-spacing: 0.12em;
+  }
+  .nav-link:hover, .nav-link.active { color: var(--gold); }
+
+  /* SECTIONS */
+  section { position: relative; z-index: 1; }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh; display: flex; align-items: center;
+    padding: 80px 2rem 2rem;
+  }
+  .hero-inner {
+    max-width: 1280px; margin: 0 auto; width: 100%;
+  }
+  .hero-tag {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--gold); letter-spacing: 0.2em;
+    text-transform: uppercase; margin-bottom: 2rem;
+    display: flex; align-items: center; gap: 0.75rem;
+  }
+  .hero-tag::before {
+    content: ''; display: block; width: 32px; height: 1px;
+    background: var(--gold);
+  }
+  .hero-name {
+    font-family: var(--font-display);
+    font-size: clamp(3.5rem, 9vw, 9rem);
+    font-weight: 900; line-height: 0.9;
+    letter-spacing: -0.03em;
+    color: var(--text);
+  }
+  .hero-name span { color: var(--gold); display: block; }
+  .hero-subtitle {
+    font-family: var(--font-mono); font-size: clamp(0.85rem, 1.5vw, 1.1rem);
+    color: var(--text-mid); margin-top: 2.5rem;
+    max-width: 600px; line-height: 1.8;
+    border-left: 2px solid var(--gold);
+    padding-left: 1.25rem;
+  }
+  .hero-ctas {
+    display: flex; gap: 1rem; margin-top: 3rem; flex-wrap: wrap;
+  }
+  .btn-primary {
+    background: var(--gold); color: var(--bg);
+    border: none; cursor: pointer; padding: 0.875rem 2.5rem;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    font-weight: 500; transition: all 0.2s;
+    clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+  }
+  .btn-primary:hover { background: #f0cc70; transform: translateY(-2px); }
+  .btn-outline {
+    background: transparent; color: var(--text-mid);
+    border: 1px solid var(--border); cursor: pointer;
+    padding: 0.875rem 2.5rem;
+    font-family: var(--font-mono); font-size: 11px;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    transition: all 0.2s;
+  }
+  .btn-outline:hover { border-color: var(--gold); color: var(--gold); }
+  .hero-stats {
+    display: grid; grid-template-columns: repeat(3, auto);
+    gap: 3rem; margin-top: 5rem;
+    border-top: 1px solid var(--border); padding-top: 3rem;
+    width: fit-content;
+  }
+  .stat-num {
+    font-family: var(--font-display);
+    font-size: 3.5rem; font-weight: 900;
+    color: var(--gold); line-height: 1;
+  }
+  .stat-label {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 0.15em; margin-top: 0.4rem;
+  }
+
+  /* SECTION HEADER */
+  .section-header {
+    max-width: 1280px; margin: 0 auto;
+    display: flex; align-items: baseline; gap: 1.5rem;
+    margin-bottom: 4rem;
+  }
+  .section-num {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--gold); letter-spacing: 0.1em;
+  }
+  .section-title {
+    font-family: var(--font-display);
+    font-size: clamp(1.8rem, 4vw, 3rem);
+    font-weight: 900; letter-spacing: -0.02em;
+  }
+  .section-line {
+    flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* EXPERIENCE */
+  .exp-section { padding: 8rem 2rem; }
+  .exp-list { max-width: 1280px; margin: 0 auto; }
+  .exp-item {
+    display: grid; grid-template-columns: 220px 1fr;
+    gap: 3rem; padding: 2.5rem 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .exp-item::before {
+    content: ''; position: absolute;
+    left: -2rem; top: 0; bottom: 0; width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--gold-dim), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .exp-item:hover::before { opacity: 1; }
+  .exp-meta {}
+  .exp-period {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--gold); letter-spacing: 0.1em; margin-bottom: 0.5rem;
+    text-transform: uppercase;
+  }
+  .exp-company {
+    font-family: var(--font-display); font-size: 1.35rem;
+    font-weight: 700; color: var(--text); margin-bottom: 0.25rem;
+    letter-spacing: -0.01em;
+  }
+  .exp-role {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  .exp-projects { display: flex; flex-direction: column; gap: 1.5rem; }
+  .exp-project {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 1.5rem;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  .exp-project:hover {
+    border-color: var(--border-accent);
+    background: var(--gold-dim);
+  }
+  .project-name {
+    font-family: var(--font-display); font-size: 0.9rem;
+    font-weight: 700; color: var(--gold); margin-bottom: 0.6rem;
+    letter-spacing: -0.01em;
+  }
+  .project-desc {
+    font-size: 0.875rem; color: var(--text-mid); line-height: 1.7;
+    margin-bottom: 0.75rem;
+  }
+  .project-bullets {
+    display: flex; flex-wrap: wrap; gap: 0.4rem;
+  }
+  .bullet {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-dim); background: var(--surface2);
+    border: 1px solid var(--border); padding: 0.2rem 0.6rem;
+    letter-spacing: 0.05em;
+  }
+  .exp-tech {
+    margin-top: 1rem; padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-dim); line-height: 1.8;
+  }
+  .exp-tech strong { color: var(--text-mid); }
+
+  /* SKILLS */
+  .skills-section { padding: 8rem 2rem; background: var(--bg2); }
+  .skills-grid {
+    max-width: 1280px; margin: 0 auto;
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1px;
+    border: 1px solid var(--border);
+    background: var(--border);
+  }
+  .skill-card {
+    background: var(--bg2); padding: 1.75rem;
+    transition: background 0.2s;
+  }
+  .skill-card:hover { background: var(--gold-dim); }
+  .skill-category {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--gold); text-transform: uppercase;
+    letter-spacing: 0.15em; margin-bottom: 1rem;
+    display: flex; align-items: center; gap: 0.5rem;
+  }
+  .skill-category::after {
+    content: ''; flex: 1; height: 1px; background: var(--border-accent);
+  }
+  .skill-tags { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .skill-tag {
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-mid); background: var(--surface);
+    border: 1px solid var(--border); padding: 0.25rem 0.65rem;
+    letter-spacing: 0.04em; transition: all 0.15s;
+    cursor: default;
+  }
+  .skill-tag:hover { color: var(--gold); border-color: var(--border-accent); }
+
+  /* EDUCATION */
+  .edu-section { padding: 8rem 2rem; }
+  .edu-list { max-width: 1280px; margin: 0 auto; }
+  .edu-item {
+    display: flex; gap: 3rem; align-items: center;
+    padding: 2rem 0; border-bottom: 1px solid var(--border);
+  }
+  .edu-year {
+    font-family: var(--font-display); font-size: 2.5rem;
+    font-weight: 900; color: var(--gold-dim);
+    min-width: 100px;
+    transition: color 0.2s;
+  }
+  .edu-item:hover .edu-year { color: var(--gold); }
+  .edu-degree {
+    font-family: var(--font-display); font-size: 1.1rem;
+    font-weight: 700; color: var(--text); margin-bottom: 0.25rem;
+  }
+  .edu-school {
+    font-family: var(--font-mono); font-size: 11px;
+    color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.1em;
+  }
+  .lang-row {
+    max-width: 1280px; margin: 4rem auto 0;
+    display: flex; gap: 1rem; flex-wrap: wrap;
+  }
+  .lang-pill {
+    font-family: var(--font-mono); font-size: 11px;
+    border: 1px solid var(--border-accent); padding: 0.5rem 1.25rem;
+    color: var(--text-mid); letter-spacing: 0.1em;
+    background: var(--gold-dim);
+  }
+
+  /* CONTACT */
+  .contact-section {
+    padding: 8rem 2rem;
+    background: var(--bg2);
+  }
+  .contact-inner {
+    max-width: 1280px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6rem;
+    align-items: start;
+  }
+  .contact-desc {
+    font-size: 1.1rem; color: var(--text-mid); line-height: 1.8;
+    margin-bottom: 2.5rem;
+  }
+  .contact-links { display: flex; flex-direction: column; gap: 1rem; }
+  .contact-link {
+    display: flex; align-items: center; gap: 1.25rem;
+    padding: 1.25rem 1.5rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    text-decoration: none;
+    transition: all 0.2s;
+    color: var(--text-mid);
+    font-family: var(--font-mono); font-size: 12px;
+    letter-spacing: 0.05em;
+  }
+  .contact-link:hover {
+    border-color: var(--border-accent);
+    background: var(--gold-dim);
+    color: var(--gold);
+  }
+  .contact-link-icon {
+    width: 36px; height: 36px; background: var(--gold-dim);
+    border: 1px solid var(--border-accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .social-row { display: flex; gap: 1rem; margin-top: 1.5rem; }
+  .social-link {
+    width: 44px; height: 44px; border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    text-decoration: none; color: var(--text-dim); font-size: 16px;
+    transition: all 0.2s; background: var(--surface);
+  }
+  .social-link:hover { border-color: var(--border-accent); color: var(--gold); background: var(--gold-dim); }
+
+  /* FOOTER */
+  .footer {
+    padding: 2rem; border-top: 1px solid var(--border);
+    font-family: var(--font-mono); font-size: 10px;
+    color: var(--text-dim); text-align: center; letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  /* SCROLL REVEAL */
+  .reveal { opacity: 0; transform: translateY(28px); transition: opacity 0.7s ease, transform 0.7s ease; }
+  .reveal.visible { opacity: 1; transform: none; }
+
+  @media (max-width: 768px) {
+    .exp-item { grid-template-columns: 1fr; gap: 1rem; }
+    .contact-inner { grid-template-columns: 1fr; gap: 3rem; }
+    .hero-stats { grid-template-columns: repeat(3, auto); gap: 1.5rem; }
+    .nav-links { display: none; }
+  }
+`;
+
+const experiences = [
+  {
+    company: "IA & Projets Perso",
+    role: "Ingénieur Full-Stack",
+    period: "Avr 2025 — Présent",
+    projects: [
+      {
+        name: "9Auth",
+        desc: "Service d'authentification multi-provider SSO : Local, Google, Facebook, Apple, GitHub. Architecture microservices avec rate limiting, mode invité et pipeline CI/CD Azure DevOps.",
+        bullets: ["Multi-provider SSO", "Architecture microservices", "CI/CD Azure DevOps"],
+      },
+      {
+        name: "IDetect",
+        desc: "Solution de vision par ordinateur et détection d'objets en temps réel. Entraînement de modèles YOLO, pipelines RAG sur corpus privés (chunking, vectorisation, embeddings sémantiques via LangChain).",
+        bullets: ["YOLO Training", "RAG LangChain", "NLP / NER spaCy"],
+      },
+    ],
+    tech: "Python · LangChain · spaCy · N8N · MistralAI · LLaMA · .NET 9 · React · TypeScript · Azure",
+  },
+  {
+    company: "Quantalys",
+    role: "Ingénieur Full-Stack",
+    period: "Jan 2023 — Mar 2025",
+    projects: [
+      {
+        name: "Platform Wealth",
+        desc: "Application de gestion de portefeuille client — souscription et consultation de contrats d'assurance vie. Animation des daily meetings, développement React à fort volume transactionnel, APIs REST .NET 9, assistance IA (configuration modèles LLM, température, biais).",
+        bullets: ["React + .NET 9", "SonarQube", "CI/CD Azure DevOps"],
+      },
+    ],
+    tech: "Azure PaaS · .NET Framework · .NET 8/9 · C# · SQL Server · React · TypeScript · RxJS · Entity Framework · WCF · SonarQube · Python",
+  },
+  {
+    company: "GazelEnergie",
+    role: "Ingénieur Full-Stack",
+    period: "Déc 2020 — Déc 2022",
+    projects: [
+      {
+        name: "Optimisation",
+        desc: "Pilotage sans chef de projet : conception complète architecture Front + Back from scratch, gestion des coûts d'optimisation électrique. Exports Excel via EPLUS et Syncfusion.",
+        bullets: ["Pilotage autonome", "Angular 12→14", "Architecture from scratch"],
+      },
+      {
+        name: "GTM",
+        desc: "CRM web + desktop complet pour la gestion des opérations. Maintenance, évolutions, gestion de droits, administration utilisateurs avec Asp.NET + Angular.",
+        bullets: ["CRM Asp.NET", "Microservices ZeroMQ", "BDD Jasmine/Karma"],
+      },
+    ],
+    tech: "Azure · .NET 5/6/Core · C# · SQL · PostgreSQL · Angular 12/14 · TypeScript · RxJS · Entity Framework · ZeroMQ · Node.js · Git",
+  },
+  {
+    company: "BNP Paribas CIB",
+    role: "Ingénieur Full-Stack",
+    period: "Sep 2017 — Déc 2020",
+    projects: [
+      {
+        name: "QFXT",
+        desc: "Application web de génération de comptes rendus pour le front office de la salle des marchés. CRUD administration utilisateurs, statistiques d'utilisation, refonte graphique, authentification SSO.",
+        bullets: ["Trading Floor", "SSO Auth", "UI/UX Refonte"],
+      },
+      {
+        name: "T-KYC",
+        desc: "Audit des contreparties financières KYC. POC Vue.js, puis migration vers Angular + .NET 4.6 avec consultation des statuts, recherches avancées multi-critères et migration REST .NET Core 2.0.",
+        bullets: ["KYC Finance", "POC Vue.js → Angular", "Migration .NET Core 2.0"],
+      },
+    ],
+    tech: ".NET MVC · Razor · C# · SQL · Angular · Vue.js · Node.js · WCF · Entity Framework · Git",
+  },
+];
+
+const skills = [
+  { cat: "Langages", items: ["C#", "TypeScript", "JavaScript ES6", "Python", "VB.Net", "Shell", "Java"] },
+  { cat: "Web & API", items: [".NET Core Web API", "REST", "State Management", "HTML5", "CSS3", "RxJS", "NGRX", "UI/UX Design"] },
+  { cat: "Frameworks", items: [".NET 9", "Angular 20", "React", "Vue.js", "ReactNative", "Bootstrap", "Material Design", "Flask", "NUXT", "Express"] },
+  { cat: "IA & ML", items: ["PyTorch", "Hugging Face", "TensorFlow", "YOLO Training", "MistralAI", "LLaMA", "LangChain", "spaCy", "N8N", "LLM Prompting"] },
+  { cat: "Bases de données", items: ["SQL Server 2022", "MySQL", "PostgreSQL", "MongoDB", "Cassandra", "Redis", "Cosmos DB"] },
+  { cat: "DevOps & Cloud", items: ["Azure DevOps", "Azure PaaS", "Kubernetes", "Docker", "CI/CD Pipelines", "SonarQube"] },
+  { cat: "Craftmanship", items: ["S.O.L.I.D", "TDD", "BDD", "Tests Unitaires", "Clean Code", "Peer-programming"] },
+  { cat: "Outils", items: ["Visual Studio 2022", "VS Code", "GitHub Copilot", "Cursor"] },
+  { cat: "Méthodologie", items: ["Agile Scrum", "Kanban", "UML"] },
+];
+
+const education = [
+  { year: "2018", degree: "Master 2 IT Manager", school: "École IPSSI — Paris" },
+  { year: "2017", degree: "Master 1 Expert Web & Mobile", school: "École IPSSI — Paris" },
+  { year: "2015", degree: "BTS SIO", school: "Paris" },
+];
+
+function useReveal() {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) { el.classList.add("visible"); obs.disconnect(); } },
+      { threshold: 0.1 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+  return ref;
+}
+
+function RevealDiv({ children, className = "", style = {} }) {
+  const ref = useReveal();
+  return <div ref={ref} className={`reveal ${className}`} style={style}>{children}</div>;
+}
 
 export default function Portfolio() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [activeSection, setActiveSection] = useState('home');
   const [scrolled, setScrolled] = useState(false);
+  const [active, setActive] = useState("home");
 
   useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 50);
-      
-      const sections = ['home', 'about', 'experience', 'skills', 'education', 'contact'];
-      const current = sections.find(section => {
-        const element = document.getElementById(section);
-        if (element) {
-          const rect = element.getBoundingClientRect();
-          return rect.top <= 100 && rect.bottom >= 100;
+    const onScroll = () => {
+      setScrolled(window.scrollY > 40);
+      const ids = ["home", "experience", "skills", "education", "contact"];
+      for (const id of ids) {
+        const el = document.getElementById(id);
+        if (el) {
+          const r = el.getBoundingClientRect();
+          if (r.top <= 120 && r.bottom >= 120) { setActive(id); break; }
         }
-        return false;
-      });
-      if (current) setActiveSection(current);
+      }
     };
-
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
   }, []);
 
-  const scrollToSection = (id) => {
-    const element = document.getElementById(id);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth' });
-      setIsMenuOpen(false);
-    }
+  const go = (id) => {
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
   };
 
-  const experiences = [
-    {
-      company: "AI Watch & Projects",
-      role: "Full-Stack Software Engineer",
-      period: "Avril 2025 - Présent",
-      projects: [
-        {
-          name: "9Auth Project",
-          description: "Service d'authentification universel avec support multi-provider (Local, Google, Facebook, Apple, GitHub). Implémentation de fonctionnalités avancées incluant le Single Sign-On (SSO), le mode invité, et le rate limiting pour une sécurité optimale.",
-          highlights: ["Architecture microservices", "Intégration IA & YOLO", "CI/CD Azure DevOps"]
-        },
-        {
-          name: "IDetect Project",
-          description: "Solution de reconnaissance d'images basée sur l'intelligence artificielle utilisant YOLO pour l'analyse et la détection d'objets en temps réel avec des performances optimisées.",
-          highlights: ["Deep Learning", "Computer Vision", "Real-time Processing"]
-        }
-      ],
-      tech: "Python, Angular 20, Azure Cloud, .NET 8, C#, PostgreSQL, Redis, Entity Framework"
-    },
-    {
-      company: "LexisNexis",
-      role: "Full-Stack Software Engineer",
-      period: "Octobre 2024 - Mars 2025",
-      projects: [
-        {
-          name: "Lexis Poly",
-          description: "CRM sophistiqué pour la gestion de documents administratifs et juridiques. Configuration et optimisation de modèles LLM pour l'entreprise, incluant l'ajustement de température et la réduction des biais pour des résultats précis et fiables.",
-          highlights: ["Configuration LLM avancée", "Solutions SOAP .NET 9", "Architecture microservices"]
-        }
-      ],
-      tech: "Azure, Angular 17, .NET Framework, .NET 8, C#, SQL Server, SonarQube, WCF, AI LLM"
-    },
-    {
-      company: "Quantalys",
-      role: "Full-Stack Software Engineer",
-      period: "Juin 2023 - Septembre 2024",
-      projects: [
-        {
-          name: "Platform Wealth",
-          description: "Application complète de gestion de portefeuille client pour la souscription et consultation de contrats d'assurance vie. Développement d'interfaces dynamiques avec .NET Razor et création de solutions robustes pour la gestion financière.",
-          highlights: ["Leadership daily meetings", "UI/UX Design avancé", "Gestion base de données SQL complexe"]
-        }
-      ],
-      tech: "Azure, Angular 16, .NET Framework, .NET 8, C#, SQL Server, Razor, Entity Framework"
-    },
-    {
-      company: "Groupe Sterne",
-      role: "Full-Stack Software Engineer",
-      period: "Avril 2022 - Janvier 2023",
-      projects: [
-        {
-          name: "Espace Client & Public Tracking",
-          description: "Développement from scratch d'une plateforme complète d'administration et de tracking de colis. Conception d'APIs CRUD .NET de bout en bout et création d'interfaces utilisateur dynamiques pour une expérience optimale.",
-          highlights: ["Architecture from scratch", "Exports Excel personnalisés", "CI/CD pipelines"]
-        }
-      ],
-      tech: "Azure, .NET 6, C#, PostgreSQL, Angular 14, RxJS, Entity Framework"
-    },
-    {
-      company: "GazelEnergie",
-      role: "Full-Stack Software Engineer",
-      period: "Avril 2021 - Mars 2022",
-      projects: [
-        {
-          name: "Optimisation",
-          description: "Application de gestion des coûts d'optimisation électrique avec pilotage projet direct sans chef de projet. Conception complète de l'architecture Front-end et Back-end from scratch avec exports Excel via EPLUS.",
-          highlights: ["Pilotage projet autonome", "Architecture complète", "Contact métier direct"]
-        },
-        {
-          name: "GTM",
-          description: "CRM principal web et desktop pour la gestion complète des opérations. Analyse approfondie de l'existant et développement d'interfaces UI dynamiques avec Asp.net pour répondre aux besoins métier évolutifs.",
-          highlights: ["Analyse besoins utilisateurs", "Asp.net & ReactJS", "Maintenance applicative"]
-        }
-      ],
-      tech: "Azure, .NET 5, Asp.net, C#, SQL, Angular 12, ReactJS, Entity Framework"
-    },
-    {
-      company: "Schlumberger",
-      role: "Full-Stack Software Engineer",
-      period: "Décembre 2020 - Avril 2021",
-      projects: [
-        {
-          name: "Prodcom",
-          description: "Application de monitoring avancé des puits pétroliers et gestion des risques. Implémentation de microservices ZeroMQ pour une architecture distribuée performante, avec création d'exports Excel via Syncfusion et tests unitaires rigoureux (BDD).",
-          highlights: ["Microservices ZeroMQ", "Angular Material", "Tests BDD Jasmine/Karma"]
-        }
-      ],
-      tech: "Azure, .NET Core, C#, SQL, Angular, Node.js, ZeroMQ, Express, Entity Framework"
-    },
-    {
-      company: "Criteo",
-      role: "Full-Stack Software Engineer",
-      period: "Janvier 2020 - Décembre 2020",
-      projects: [
-        {
-          name: "CSI Publisher",
-          description: "Application de gestion et d'historisation des coûts des publishers avec analyse approfondie des besoins fonctionnels pour une réponse technique optimale.",
-          highlights: ["Procédures stockées SQL", "Mise en production", "Clean code"]
-        },
-        {
-          name: "Homeland",
-          description: "Solution complète de gestion de droits et management des groupes d'utilisateurs. Interface d'administration CRUD sophistiquée avec refonte graphique complète de l'existant et création d'APIs REST performantes.",
-          highlights: ["Administration CRUD", "Refonte graphique", "Tests Mocha BDD"]
-        }
-      ],
-      tech: "Azure, .NET, C#, SQL, ReactJS, Node.js, Entity Framework"
-    },
-    {
-      company: "SAUR",
-      role: "Full-Stack Software Engineer",
-      period: "Mars 2019 - Décembre 2019",
-      projects: [
-        {
-          name: "ICR",
-          description: "Application web de consultation d'historique des contrôles de maintenance sur sites avec module de recherche dynamique avancé. Conception et réalisation complète de la solution avec peer-programming et clean code.",
-          highlights: ["Recherche dynamique", "Peer-programming", "Jasmine BDD"]
-        },
-        {
-          name: "Code de Conduite",
-          description: "Application mobile de consultation du règlement interne SAUR. Développement d'un algorithme intelligent de génération automatique des pages à partir de données JSON pour une flexibilité maximale.",
-          highlights: ["ReactNative", "Algorithme génération pages", "EXPO"]
-        }
-      ],
-      tech: "Azure, .NET Core 2.2, C#, SQL, Vue.js, ReactNative, Node.js, Kibana"
-    },
-    {
-      company: "BNP CIB",
-      role: "Full-Stack Software Engineer",
-      period: "Septembre 2017 - Décembre 2018",
-      projects: [
-        {
-          name: "QFXT",
-          description: "Application web de génération de comptes rendus pour utilisateurs front office de la salle des marchés. Proposition d'une solution web innovante avec interface d'administration complète (CRUD), statistiques d'utilisation détaillées et authentification SSO.",
-          highlights: ["Trading floor", "SSO Authentication", "UI/UX Design"]
-        },
-        {
-          name: "T-KYC",
-          description: "Application web d'audit des contreparties financières (KYC) pour front office. Création d'un POC en Vue.js pour optimisation du temps de développement, puis migration vers Angular et .NET 4.6 avec interface de consultation du statut des contreparties et recherches avancées multi-critères.",
-          highlights: ["POC Vue.js", "Migration .NET Core 2.0", "Recherches avancées"]
-        }
-      ],
-      tech: ".NET MVC, Razor, C#, SQL, Angular, Vue.js, Node.js, WCF, Entity Framework"
-    },
-    {
-      company: "AUSY",
-      role: "Full-Stack Software Engineer",
-      period: "Septembre 2015 - Août 2017",
-      projects: [
-        {
-          name: "SIER",
-          description: "Application de gestion de budgets avec refactorisation complète du code existant. Développement de nouvelles fonctionnalités incluant la création d'algorithmes .NET, procédures stockées SQL, APIs REST et tests unitaires Jasmine avec recettage applicatif complet.",
-          highlights: ["Refactorisation code", "Algorithmes .NET", "Tests Jest TDD"]
-        }
-      ],
-      tech: ".NET, C#, Ext.JS, HTML, CSS, JavaScript, Entity Framework"
-    }
-  ];
-
-  const skills = {
-    "Langages": ["C#", "TypeScript", "JavaScript ES6", "Python", "VB.Net", "Shell", "Java"],
-    "Web": [".NET Core Web API", "REST API", "State Management", "UI/UX Design", "HTML5", "CSS3", "RxJS", "NGRX"],
-    "Frameworks": [".NET 9", "Angular 20", "React", "Vue.js", "React Native", "Bootstrap", "Material Design", "Jasmine", "Jest", "Express", "TensorFlow", "Kibana", "Elastic", "Flask", "NUXT"],
-    "Outils": ["Visual Studio 2022", "Visual Code", "NotePad++", "GitHub Copilot", "Cursor"],
-    "Bases de données": ["MySQL", "SQL Server 2022", "MongoDB", "Cassandra", "Redis", "Cosmos DB"],
-    "Systèmes": ["Docker", "macOS", "Windows", "Linux", "Android", "iOS"],
-    "Craftmanship": ["S.O.L.I.D", "TDD", "BDD", "Tests Unitaires", "Clean Code", "Peer Programming"],
-    "DevOps": ["Azure DevOps", "Kubernetes", "CI/CD Pipelines"],
-    "IA & ML": ["PyTorch", "Hugging Face", "TensorFlow", "YOLO Training", "Mistral AI", "Llama", "LLM Prompting", "Développement LLM from scratch"],
-    "Finance": ["EGC (Épargne en Gestion Collective)", "Gestion de portefeuille", "Assurance vie", "KYC (Know Your Customer)", "Outils financiers trading"],
-    "Méthodologie": ["Agile Scrum", "UML", "Kanban"]
-  };
-
-  const education = [
-    { year: "2018", degree: "Master 2 IT Manager", school: "École IPSSI" },
-    { year: "2017", degree: "Master 1 Expert Web & Mobile", school: "École IPSSI" },
-    { year: "2015", degree: "BTS SIO", school: "Paris" }
+  const NAV_ITEMS = [
+    { id: "home", label: "Accueil" },
+    { id: "experience", label: "Expérience" },
+    { id: "skills", label: "Compétences" },
+    { id: "education", label: "Formation" },
+    { id: "contact", label: "Contact" },
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
-      {/* Navigation */}
-      <nav className={`fixed w-full z-50 transition-all duration-300 ${scrolled ? 'bg-slate-900/95 backdrop-blur-sm shadow-lg' : 'bg-transparent'}`}>
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-              BK
-            </div>
-            
-            <div className="hidden md:flex space-x-8">
-              {['home', 'about', 'experience', 'skills', 'education', 'contact'].map((item) => (
-                <button
-                  key={item}
-                  onClick={() => scrollToSection(item)}
-                  className={`capitalize transition-colors ${
-                    activeSection === item ? 'text-blue-400' : 'text-gray-300 hover:text-white'
-                  }`}
-                >
-                  {item === 'home' ? 'Accueil' : item === 'about' ? 'À propos' : item === 'experience' ? 'Expérience' : item === 'skills' ? 'Compétences' : item === 'education' ? 'Formation' : 'Contact'}
-                </button>
-              ))}
-            </div>
+    <>
+      <style>{FONTS}{CSS}</style>
+      <div className="grain" />
+      <div className="grid-bg" />
 
-            <button
-              className="md:hidden"
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-            >
-              {isMenuOpen ? <X /> : <Menu />}
-            </button>
+      {/* NAV */}
+      <nav className={`nav${scrolled ? " scrolled" : ""}`}>
+        <div className="nav-inner">
+          <div className="nav-logo">BK</div>
+          <div className="nav-links">
+            {NAV_ITEMS.map(({ id, label }) => (
+              <button key={id} className={`nav-link${active === id ? " active" : ""}`} onClick={() => go(id)}>
+                {label}
+              </button>
+            ))}
           </div>
         </div>
-
-        {isMenuOpen && (
-          <div className="md:hidden bg-slate-900/95 backdrop-blur-sm">
-            <div className="px-2 pt-2 pb-3 space-y-1">
-              {['home', 'about', 'experience', 'skills', 'education', 'contact'].map((item) => (
-                <button
-                  key={item}
-                  onClick={() => scrollToSection(item)}
-                  className="block w-full text-left px-3 py-2 capitalize text-gray-300 hover:text-white hover:bg-slate-800 rounded"
-                >
-                  {item === 'home' ? 'Accueil' : item === 'about' ? 'À propos' : item === 'experience' ? 'Expérience' : item === 'skills' ? 'Compétences' : item === 'education' ? 'Formation' : 'Contact'}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
       </nav>
 
-      {/* Hero Section */}
-      <section id="home" className="min-h-screen flex items-center justify-center pt-16">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <div className="animate-fade-in">
-            <h1 className="text-5xl md:text-7xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                Bilal KHALAK
-              </span>
-            </h1>
-            <h2 className="text-2xl md:text-4xl text-gray-300 mb-4">
-              Freelance Software Engineer
-            </h2>
-            <p className="text-xl md:text-2xl text-blue-400 mb-8">
-              C# .NET 10 / Azure / Angular - Intelligence Artificielle
-            </p>
-            <p className="text-lg text-gray-400 mb-12 max-w-2xl mx-auto">
-              10 ans d'expérience dans le développement de solutions innovantes et performantes
-            </p>
-            <div className="flex justify-center space-x-4">
-              <button
-                onClick={() => scrollToSection('contact')}
-                className="bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 px-8 py-3 rounded-full font-semibold transition-all transform hover:scale-105"
-              >
-                Me contacter
-              </button>
-              <button
-                onClick={() => scrollToSection('experience')}
-                className="border-2 border-blue-400 hover:bg-blue-400/10 px-8 py-3 rounded-full font-semibold transition-all"
-              >
-                Voir mon parcours
-              </button>
-            </div>
+      {/* HERO */}
+      <section id="home" className="hero">
+        <div className="hero-inner">
+          <div className="hero-tag">Développeur Full-Stack .NET / AI — Paris</div>
+          <h1 className="hero-name">
+            Bilal<span>Khalak</span>
+          </h1>
+          <div className="hero-subtitle">
+            C# · .NET 10 · Angular 20+ · React · Azure Cloud · Intelligence Artificielle<br />
+            10 ans d'expérience · Finance · Assurance · Énergie · Tech
           </div>
-          <div className="mt-16 animate-bounce">
-            <ChevronDown className="mx-auto text-blue-400" size={32} />
+          <div className="hero-ctas">
+            <button className="btn-primary" onClick={() => go("contact")}>Me contacter</button>
+            <button className="btn-outline" onClick={() => go("experience")}>Voir le parcours</button>
           </div>
-        </div>
-      </section>
-
-      {/* About Section */}
-      <section id="about" className="py-20 bg-slate-800/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold mb-12 text-center">
-            <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-              À propos
-            </span>
-          </h2>
-          <div className="grid md:grid-cols-2 gap-12 items-center">
+          <div className="hero-stats">
             <div>
-              <p className="text-lg text-gray-300 mb-6 leading-relaxed">
-                Ingénieur Full-Stack passionné avec <strong>10 ans d'expérience</strong> dans la conception et le développement de solutions logicielles robustes et innovantes. Spécialisé dans l'écosystème <strong>.NET/C#</strong>, <strong>Azure Cloud</strong>, et les frameworks modernes comme <strong>Angular</strong> et <strong>React</strong>.
-              </p>
-              <p className="text-lg text-gray-300 mb-6 leading-relaxed">
-                Expert en <strong>Intelligence Artificielle</strong> avec une expertise approfondie dans le développement de LLM from scratch, le training de modèles YOLO, et l'intégration d'IA (Mistral AI, Llama). Passionné par les architectures microservices, le clean code et les méthodologies Agile.
-              </p>
-              <p className="text-lg text-gray-300 leading-relaxed">
-                Fort d'une expérience dans des secteurs variés (finance, énergie, logistique, technologie), j'apporte une vision stratégique et une capacité d'adaptation aux enjeux métier les plus complexes.
-              </p>
-            </div>
-            <div className="grid grid-cols-2 gap-6">
-              <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 p-6 rounded-lg border border-blue-500/30">
-                <Code className="text-blue-400 mb-3" size={32} />
-                <h3 className="text-2xl font-bold mb-2">10+</h3>
-                <p className="text-gray-400">Années d'expérience</p>
-              </div>
-              <div className="bg-gradient-to-br from-purple-500/20 to-pink-500/20 p-6 rounded-lg border border-purple-500/30">
-                <Briefcase className="text-purple-400 mb-3" size={32} />
-                <h3 className="text-2xl font-bold mb-2">25+</h3>
-                <p className="text-gray-400">Projets réalisés</p>
-              </div>
-              <div className="bg-gradient-to-br from-pink-500/20 to-blue-500/20 p-6 rounded-lg border border-pink-500/30">
-                <Award className="text-pink-400 mb-3" size={32} />
-                <h3 className="text-2xl font-bold mb-2">9</h3>
-                <p className="text-gray-400">Entreprises prestigieuses</p>
-              </div>
-              <div className="bg-gradient-to-br from-blue-500/20 to-purple-500/20 p-6 rounded-lg border border-blue-500/30">
-                <GraduationCap className="text-blue-400 mb-3" size={32} />
-                <h3 className="text-2xl font-bold mb-2">Master 2</h3>
-                <p className="text-gray-400">IT Manager</p>
-              </div>
+              <div className="stat-num">10+</div>
+              <div className="stat-label">Ans d'exp.</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Experience Section */}
-      <section id="experience" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold mb-12 text-center">
-            <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-              Expérience Professionnelle
-            </span>
-          </h2>
-          <div className="space-y-8">
-            {experiences.map((exp, idx) => (
-              <div key={idx} className="bg-slate-800/50 rounded-lg p-6 border border-slate-700 hover:border-blue-500/50 transition-all">
-                <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-                  <div>
-                    <h3 className="text-2xl font-bold text-blue-400">{exp.company}</h3>
-                    <p className="text-lg text-gray-300">{exp.role}</p>
-                  </div>
-                  <p className="text-gray-400 mt-2 md:mt-0">{exp.period}</p>
+      {/* EXPERIENCE */}
+      <section id="experience" className="exp-section">
+        <RevealDiv>
+          <div className="section-header">
+            <span className="section-num">01</span>
+            <h2 className="section-title">Expérience</h2>
+            <div className="section-line" />
+          </div>
+        </RevealDiv>
+        <div className="exp-list">
+          {experiences.map((exp, i) => (
+            <RevealDiv key={i} style={{ transitionDelay: `${i * 80}ms` }}>
+              <div className="exp-item">
+                <div className="exp-meta">
+                  <div className="exp-period">{exp.period}</div>
+                  <div className="exp-company">{exp.company}</div>
+                  <div className="exp-role">{exp.role}</div>
                 </div>
-                <div className="space-y-4">
-                  {exp.projects.map((project, pIdx) => (
-                    <div key={pIdx} className="ml-4 border-l-2 border-purple-500 pl-4">
-                      <h4 className="text-xl font-semibold text-purple-400 mb-2">{project.name}</h4>
-                      <p className="text-gray-300 mb-3">{project.description}</p>
-                      <div className="flex flex-wrap gap-2">
-                        {project.highlights.map((highlight, hIdx) => (
-                          <span key={hIdx} className="bg-blue-500/20 text-blue-300 px-3 py-1 rounded-full text-sm border border-blue-500/30">
-                            {highlight}
-                          </span>
-                        ))}
+                <div>
+                  <div className="exp-projects">
+                    {exp.projects.map((p, j) => (
+                      <div className="exp-project" key={j}>
+                        <div className="project-name">— {p.name}</div>
+                        <div className="project-desc">{p.desc}</div>
+                        <div className="project-bullets">
+                          {p.bullets.map((b, k) => <span className="bullet" key={k}>{b}</span>)}
+                        </div>
                       </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="mt-4 pt-4 border-t border-slate-700">
-                  <p className="text-sm text-gray-400">
-                    <strong>Environnement technique:</strong> {exp.tech}
-                  </p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Skills Section */}
-      <section id="skills" className="py-20 bg-slate-800/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold mb-12 text-center">
-            <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-              Compétences Techniques
-            </span>
-          </h2>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Object.entries(skills).map(([category, items]) => (
-              <div key={category} className="bg-slate-800 rounded-lg p-6 border border-slate-700 hover:border-purple-500/50 transition-all">
-                <h3 className="text-xl font-bold mb-4 text-purple-400">{category}</h3>
-                <div className="flex flex-wrap gap-2">
-                  {items.map((skill, idx) => (
-                    <span key={idx} className="bg-gradient-to-r from-blue-500/10 to-purple-500/10 text-gray-300 px-3 py-1 rounded text-sm border border-blue-500/20">
-                      {skill}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Education Section */}
-      <section id="education" className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold mb-12 text-center">
-            <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-              Formation
-            </span>
-          </h2>
-          <div className="max-w-3xl mx-auto space-y-6">
-            {education.map((edu, idx) => (
-              <div key={idx} className="bg-slate-800/50 rounded-lg p-6 border border-slate-700 hover:border-blue-500/50 transition-all flex items-center">
-                <div className="bg-gradient-to-br from-blue-500 to-purple-600 rounded-full p-3 mr-4">
-                  <GraduationCap size={24} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-xl font-bold text-blue-400">{edu.degree}</h3>
-                      <p className="text-gray-300">{edu.school}</p>
-                    </div>
-                    <span className="bg-purple-500/20 text-purple-300 px-3 py-1 rounded-full text-sm border border-purple-500/30">
-                      {edu.year}
-                    </span>
+                    ))}
                   </div>
+                  <div className="exp-tech"><strong>Stack :</strong> {exp.tech}</div>
+                </div>
+              </div>
+            </RevealDiv>
+          ))}
+        </div>
+      </section>
+
+      {/* SKILLS */}
+      <section id="skills" className="skills-section">
+        <RevealDiv>
+          <div className="section-header">
+            <span className="section-num">02</span>
+            <h2 className="section-title">Compétences</h2>
+            <div className="section-line" />
+          </div>
+        </RevealDiv>
+        <RevealDiv>
+          <div className="skills-grid">
+            {skills.map(({ cat, items }) => (
+              <div className="skill-card" key={cat}>
+                <div className="skill-category">{cat}</div>
+                <div className="skill-tags">
+                  {items.map((s) => <span className="skill-tag" key={s}>{s}</span>)}
                 </div>
               </div>
             ))}
           </div>
-          <div className="mt-12 text-center">
-            <div className="inline-block bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg p-6 border border-blue-500/30">
-              <p className="text-lg text-gray-300 mb-2">
-                <strong>Langues:</strong>
-              </p>
-              <div className="flex gap-4 justify-center">
-                <span className="bg-blue-500/20 text-blue-300 px-4 py-2 rounded-full border border-blue-500/30">
-                  🇫🇷 Français - Natif
-                </span>
-                <span className="bg-purple-500/20 text-purple-300 px-4 py-2 rounded-full border border-purple-500/30">
-                  🇬🇧 Anglais - Courant
-                </span>
-              </div>
-            </div>
-          </div>
-        </div>
+        </RevealDiv>
       </section>
 
-      {/* Contact Section */}
-      <section id="contact" className="py-20 bg-slate-800/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-4xl font-bold mb-12 text-center">
-            <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-              Contact
-            </span>
-          </h2>
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-slate-800 rounded-lg p-8 border border-slate-700">
-              <p className="text-lg text-gray-300 mb-8 text-center">
-                N'hésitez pas à me contacter pour discuter de vos projets ou opportunités de collaboration.
+      {/* EDUCATION */}
+      <section id="education" className="edu-section">
+        <RevealDiv>
+          <div className="section-header">
+            <span className="section-num">03</span>
+            <h2 className="section-title">Formation</h2>
+            <div className="section-line" />
+          </div>
+        </RevealDiv>
+        <div className="edu-list">
+          {education.map((e, i) => (
+            <RevealDiv key={i} style={{ transitionDelay: `${i * 100}ms` }}>
+              <div className="edu-item">
+                <div className="edu-year">{e.year}</div>
+                <div>
+                  <div className="edu-degree">{e.degree}</div>
+                  <div className="edu-school">{e.school}</div>
+                </div>
+              </div>
+            </RevealDiv>
+          ))}
+        </div>
+        <RevealDiv>
+          <div className="lang-row">
+            <div className="lang-pill">🇫🇷 Français — Natif</div>
+            <div className="lang-pill">🇬🇧 Anglais — Courant</div>
+            <div className="lang-pill">✈️ Passion : Voyages & Découverte</div>
+          </div>
+        </RevealDiv>
+      </section>
+
+      {/* CONTACT */}
+      <section id="contact" className="contact-section">
+        <RevealDiv>
+          <div className="section-header">
+            <span className="section-num">04</span>
+            <h2 className="section-title">Contact</h2>
+            <div className="section-line" />
+          </div>
+        </RevealDiv>
+        <RevealDiv>
+          <div className="contact-inner">
+            <div>
+              <p className="contact-desc">
+                Disponible pour des missions freelance, collaborations ou opportunités. 
+                N'hésitez pas à me contacter pour discuter de vos projets.
               </p>
-              <div className="space-y-4">
-                <a
-                  href="mailto:bilal@khalak.fr"
-                  className="flex items-center justify-center space-x-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 p-4 rounded-lg transition-all transform hover:scale-105"
-                >
-                  <Mail size={24} />
-                  <span className="text-lg font-semibold">bilal@khalak.fr</span>
+              <div className="contact-links">
+                <a href="mailto:bilal@khalak.fr" className="contact-link">
+                  <span className="contact-link-icon">✉</span>
+                  bilal@khalak.fr
                 </a>
-                <a
-                  href="tel:+33644112435"
-                  className="flex items-center justify-center space-x-3 bg-slate-700 hover:bg-slate-600 p-4 rounded-lg transition-all"
-                >
-                  <Phone size={24} />
-                  <span className="text-lg">+33 6 44 11 24 35</span>
+                <a href="tel:+33644112435" className="contact-link">
+                  <span className="contact-link-icon">✆</span>
+                  +33 6 44 11 24 35
                 </a>
               </div>
-              <div className="mt-8 flex justify-center space-x-6">
-                <a
-                  href="https://github.com/gteon/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <Github size={32} />
+              <div className="social-row">
+                <a href="https://github.com/gteon/" target="_blank" rel="noreferrer" className="social-link" title="GitHub">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
                 </a>
-                <a
-                  href="https://www.linkedin.com/in/bilal-khalak-267318ba/"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-gray-400 hover:text-white transition-colors"
-                >
-                  <Linkedin size={32} />
+                <a href="https://www.linkedin.com/in/bilal-khalak-267318ba/" target="_blank" rel="noreferrer" className="social-link" title="LinkedIn">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433c-1.144 0-2.063-.926-2.063-2.065 0-1.138.92-2.063 2.063-2.063 1.14 0 2.064.925 2.064 2.063 0 1.139-.925 2.065-2.064 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>
                 </a>
               </div>
             </div>
+            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {[
+                { label: "Stack Principal", val: "C# · .NET 9 · Angular 20 · Azure" },
+                { label: "Spécialité IA", val: "RAG · LLM · YOLO · spaCy · LangChain" },
+                { label: "DevOps", val: "Azure DevOps · Docker · Kubernetes · CI/CD" },
+                { label: "Localisation", val: "Paris, France — Remote OK" },
+              ].map(({ label, val }) => (
+                <div key={label} style={{
+                  padding: "1rem 1.25rem", border: "1px solid var(--border)",
+                  background: "var(--surface)", display: "flex", flexDirection: "column", gap: "0.3rem"
+                }}>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "10px", color: "var(--gold)", textTransform: "uppercase", letterSpacing: "0.1em" }}>{label}</div>
+                  <div style={{ fontFamily: "var(--font-mono)", fontSize: "12px", color: "var(--text-mid)" }}>{val}</div>
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
+        </RevealDiv>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-slate-900 py-8 border-t border-slate-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center text-gray-400">
-            <p className="mb-2">© 2025 Bilal KHALAK - Tous droits réservés</p>
-          </div>
-        </div>
+      <footer className="footer">
+        © 2025 Bilal Khalak — Tous droits réservés
       </footer>
-
-      <style jsx global>{`
-        @keyframes fade-in {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .animate-fade-in {
-          animation: fade-in 1s ease-out;
-        }
-
-        html {
-          scroll-behavior: smooth;
-        }
-
-        @keyframes bounce {
-          0%, 100% {
-            transform: translateY(0);
-          }
-          50% {
-            transform: translateY(-10px);
-          }
-        }
-
-        .animate-bounce {
-          animation: bounce 2s infinite;
-        }
-      `}</style>
-    </div>
+    </>
   );
 }
